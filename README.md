@@ -5,3 +5,8 @@ This is a python utility designed to remove frames from a PCAP file for anonymiz
 This project is meant to be configured with PIP. Once you clone this repository you should be able to install the required packages with the following syntax:
 
 `pip install -r requirements.txt`
+
+# operation
+Execution of this script is meant to be as simple as possible:
+
+`./pcap_scrub.py -P browser,pop,ldap -p 3535,1248,9100 <TARGET PCAP>`
