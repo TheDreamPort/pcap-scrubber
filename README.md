@@ -1,6 +1,8 @@
 # pcap-scrubber
 This is a python utility designed to remove frames from a PCAP file for anonymization. this project was created to serve a need for PCAP analysis at DreamPort. The more realistic PCAP we study the better off we are HOWEVER we must ensure not to reveal personally or professionally identifiable information from the environment where we gathered our data in the first place.
 
+At this time, this script is written for (and tested on) Python 2.7 but we are confident it will easily port to Python 3.7. This script was developed and tested on Ubuntu 18.04.1 LTS desktop.
+
 # installation
 This project is meant to be installed and configured with PIP. Once you clone this repository you should be able to install the required packages with the following syntax:
 
