@@ -3,4 +3,5 @@ This is a python utility designed to remove frames from a PCAP file for anonymiz
 
 # installation
 This project is meant to be configured with PIP. Once you clone this repository you should be able to install the required packages with the following syntax:
+
 `pip install -r requirements.txt`
