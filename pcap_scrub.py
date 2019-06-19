@@ -10,7 +10,7 @@ from dpkt.ip import IP, IP_PROTO_UDP
 from dpkt.udp import UDP
 
 def parse_arguments( ):
-    parser = argparse.ArgumentParser(description='Process a PCAP file for anonymization')
+    parser = argparse.ArgumentParser( description='Process a PCAP file for anonymization' )
     parser.add_argument("-p", "--port", type=str, help="specify application layer port you wish to remove")
     parser.add_argument("-P", "--application-protocol", type=str, help="specify application layer protocol you wish to remove")
     parser.add_argument("-s", "--srcport", type=int, help="specify the source port of the application layer protocol you wish to remove")
@@ -99,3 +99,4 @@ def process_pcap( arguments ):
 if __name__ == "__main__":
     arguments = parse_arguments( )
     process_pcap( arguments )
+    
