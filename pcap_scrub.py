@@ -10,6 +10,8 @@ from dpkt.ip import IP, IP_PROTO_UDP
 from dpkt.udp import UDP
 import datetime
 import socket
+from os import listdir
+from os.path import isfile, join
 
 def mac_addr(address):
     """Convert a MAC address to a readable/printable string
@@ -37,24 +39,30 @@ def inet_to_str(inet):
 
 def parse_arguments( ):
     parser = argparse.ArgumentParser( description='Process a PCAP file for anonymization' )
-    parser.add_argument("-p", "--port", type=str, help="specify application layer port you wish to remove")
-    parser.add_argument("-P", "--application-protocol", type=str, help="specify application layer protocol you wish to remove")
+    parser.add_argument( "-p", "--port", type=str, help="specify application layer port you wish to remove")
+    parser.add_argument( "-P", "--application-protocol", type=str, help="specify application layer protocol you wish to remove")
     parser.add_argument( "-f", "--flow", type=str, help="specify a source,destination pair of IP addresses to scrub" )
-    parser.add_argument("-s", "--srcport", type=int, help="specify the source port of the application layer protocol you wish to remove")
-    parser.add_argument("-S", "--source", type=str, help="specify a source addresss to drop")
-    parser.add_argument("-D", "--dest", type=str, help="specify a destination addresss to drop")
-    parser.add_argument("-d", "--destport", type=int, help="specify the destination port of the application layer protocol you wish to remove")
-    parser.add_argument('target', metavar='pcap', type=str, help='the actual pcap file you wish to process')
+    parser.add_argument( "-s", "--srcport", type=int, help="specify the source port of the application layer protocol you wish to remove")
+    parser.add_argument( "-S", "--source", type=str, help="specify a source addresss to drop")
+    parser.add_argument( "-O", "--output", type=str, help="specify a destination folder for PCAP")
+    parser.add_argument( "-D", "--dest", type=str, help="specify a destination addresss to drop")
+    parser.add_argument( "-d", "--destport", type=int, help="specify the destination port of the application layer protocol you wish to remove")
+    parser.add_argument( 'target', metavar='pcap', type=str, help='the actual pcap file you wish to process')
 
     return parser.parse_args( )
 
-def process_pcap( arguments ):
-    directory    = os.path.dirname( arguments.target )
-    base_pcap    = os.path.basename( arguments.target )
+def process_single_pcap( arguments, filename ):
+    directory    = os.path.dirname( filename )
+    base_pcap    = os.path.basename( filename )
     (name,ext)   = os.path.splitext( base_pcap )
     if "-" in name:
         name = name.split("-")[0]
-    cleaned_pcap = os.path.join( directory,name+".cleaned." + str(time.time()) + ".pcap" )
+
+    if arguments.output and os.path.isdir(arguments.output):
+        print( "saving cleaned PCAP file to {}".format(arguments.output) )
+        cleaned_pcap = os.path.join( arguments.output,name+".cleaned." + str(time.time()) + ".pcap" )
+    else:
+        cleaned_pcap = os.path.join( directory,name+".cleaned." + str(time.time()) + ".pcap" )
  
     # https://programtalk.com/python-examples/dpkt.pcap.Writer/
     writer       = open( cleaned_pcap, "wb" )
@@ -66,7 +74,7 @@ def process_pcap( arguments ):
     if arguments.port:
         arguments.port = arguments.port.split(",")
 
-    with open( arguments.target, "rb" ) as file_object:
+    with open( filename, "rb" ) as file_object:
         pcap_reader        = dpkt.pcap.Reader( file_object )
         for ts, buf in pcap_reader:
             ethernet_layer = dpkt.ethernet.Ethernet(buf)
@@ -138,9 +146,21 @@ def process_pcap( arguments ):
                 if arguments.dest and arguments.dest == inet_to_str(ip_layer.dst):
                     print( "found a packet with matching destination {} to drop".format(inet_to_str(ip_layer.dst)) ) 
                     continue
+            
+            # https://stackoverflow.com/questions/55765722/how-do-i-use-the-timestamp-from-the-header-of-a-live-capture-in-dpkt-writer
+            pcap_writer.writepkt( buf,ts )
+            writer.flush()    
 
-            pcap_writer.writepkt( buf )
-            writer.flush()
+def process_pcap( arguments ):
+    if os.path.isfile( arguments.target ):
+        print( "processing a single file '{}'".format(arguments.target) )
+        process_single_pcap( arguments, arguments.target )
+    elif os.path.isdir( arguments.target ):
+        print( "processing entire directory of PCAP {}".format(arguments.target) )
+        onlyfiles = [f for f in listdir(arguments.target) if isfile(join(arguments.target, f))]
+        for f in onlyfiles:
+            print( "processing PCAP file {}".format(f) )
+            process_single_pcap( arguments, f )
 
 if __name__ == "__main__":
     arguments = parse_arguments( )
