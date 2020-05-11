@@ -8,12 +8,41 @@ import dpkt
 import time
 from dpkt.ip import IP, IP_PROTO_UDP
 from dpkt.udp import UDP
+import datetime
+import socket
+
+def mac_addr(address):
+    """Convert a MAC address to a readable/printable string
+
+       Args:
+           address (str): a MAC address in hex form (e.g. '\x01\x02\x03\x04\x05\x06')
+       Returns:
+           str: Printable/readable MAC address
+    """
+    return ':'.join('%02x' % compat_ord(b) for b in address)
+
+def inet_to_str(inet):
+    """Convert inet object to a string
+
+        Args:
+            inet (inet struct): inet network address
+        Returns:
+            str: Printable/readable IP address
+    """
+    # First try ipv4 and then ipv6
+    try:
+        return socket.inet_ntop(socket.AF_INET, inet)
+    except ValueError:
+        return socket.inet_ntop(socket.AF_INET6, inet)
 
 def parse_arguments( ):
     parser = argparse.ArgumentParser( description='Process a PCAP file for anonymization' )
     parser.add_argument("-p", "--port", type=str, help="specify application layer port you wish to remove")
     parser.add_argument("-P", "--application-protocol", type=str, help="specify application layer protocol you wish to remove")
+    parser.add_argument( "-f", "--flow", type=str, help="specify a source,destination pair of IP addresses to scrub" )
     parser.add_argument("-s", "--srcport", type=int, help="specify the source port of the application layer protocol you wish to remove")
+    parser.add_argument("-S", "--source", type=str, help="specify a source addresss to drop")
+    parser.add_argument("-D", "--dest", type=str, help="specify a destination addresss to drop")
     parser.add_argument("-d", "--destport", type=int, help="specify the destination port of the application layer protocol you wish to remove")
     parser.add_argument('target', metavar='pcap', type=str, help='the actual pcap file you wish to process')
 
@@ -92,6 +121,23 @@ def process_pcap( arguments ):
                     if source_port in arguments.port or dest_port in arguments.port:
                         print( "omitting a frame based on the port specifier list {}".format(arguments.port) )
                         continue
+                
+                if arguments.flow:
+                    pair_of_ips = arguments.flow.split(",")
+                    source_ip = inet_to_str(ip_layer.src)
+                    dest_ip   = inet_to_str(ip_layer.dst) 
+
+                    if source_ip in pair_of_ips and dest_ip in pair_of_ips:
+                        print( "found matching flow to drop" )
+                        continue
+
+                if arguments.source and arguments.source == inet_to_str(ip_layer.src):
+                    print( "found a packet with matching source {} to drop".format(inet_to_str(ip_layer.src)) ) 
+                    continue
+
+                if arguments.dest and arguments.dest == inet_to_str(ip_layer.dst):
+                    print( "found a packet with matching destination {} to drop".format(inet_to_str(ip_layer.dst)) ) 
+                    continue
 
             pcap_writer.writepkt( buf )
             writer.flush()
